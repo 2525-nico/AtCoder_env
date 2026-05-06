@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 # --- Constants & Configuration ---
-BASE_DIR = Path("/home/natsuko/AtCoder_env")
+BASE_DIR = Path(__file__).resolve().parent
 VENV_PYTHON = BASE_DIR / ".venv" / "bin" / "python"
 
 # ANSI Colors
@@ -181,35 +181,6 @@ def test(args):
     cmd = f"uv run oj t -c '{exec_cmd}' -d tests"
     run_test_cmd(cmd, cwd=target_dir)
 
-def submit(args):
-    """Handler for 'submit' command."""
-    ctype, number, problem = args.type, args.number, args.problem
-    
-    # Auto-detection
-    d_ctype, d_number, d_problem = get_contest_info_from_cwd()
-    ctype = ctype or d_ctype
-    number = number or d_number
-    problem = problem or d_problem
-
-    if not all([ctype, number, problem]):
-        print(f"{C_RED}Error{C_RESET}: Contest type, number, and problem are required (or run from a problem directory).")
-        return
-
-    target_dir = get_target_dir(ctype, number, problem)
-    if not target_dir.exists():
-        print(f"{C_RED}Error{C_RESET}: Directory {target_dir} does not exist.")
-        return
-
-    filename, _ = get_active_language(target_dir)
-    print(f"{C_CYAN}[INFO]{C_RESET} {C_BOLD}{filename}{C_RESET} を提出します...")
-    
-    if filename.endswith(".py"):
-        # Pythonファイルの場合は自動的にPyPyを優先して提出する
-        cmd = f"acc s {filename} -- --guess-python-interpreter pypy"
-    else:
-        cmd = f"acc s {filename}"
-        
-    run_cmd(cmd, cwd=target_dir)
 
 # --- Main Entry Point ---
 
@@ -228,18 +199,12 @@ def main():
     p_test.add_argument("number", nargs='?', default=None)
     p_test.add_argument("problem", nargs='?', help="問題 (a, b, c など)", default=None)
 
-    # submit
-    p_submit = subparsers.add_parser("submit", help="提出 (例: ac submit abc 300 a)")
-    p_submit.add_argument("type", nargs='?', default=None)
-    p_submit.add_argument("number", nargs='?', default=None)
-    p_submit.add_argument("problem", nargs='?', default=None)
 
     args = parser.parse_args()
 
     handlers = {
         "fetch": fetch,
-        "test": test,
-        "submit": submit
+        "test": test
     }
 
     try:

@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # ===== ユーザー依存のパス設定 =====
-PROJECT_ROOT="/home/natsuko/AtCoder_env"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 VENV_PYTHON="${PROJECT_ROOT}/.venv/bin/python"
 SCRIPTS_DIR="${PROJECT_ROOT}/scripts"
 # ===============================
@@ -41,14 +42,6 @@ from pathlib import Path
 contest_id = sys.argv[1]
 base_dir = Path(sys.argv[2])
 
-# contest.acc.json を作成
-contest_info = {
-    "name": "",
-    "tasks": []
-}
-
-with open(base_dir / 'contest.acc.json', 'w') as f:
-    json.dump(contest_info, f)
 
 # 各問題のディレクトリを作成（a～g）
 for problem_label in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'ex']:
