@@ -8,6 +8,28 @@ import os
 def clean_latex(text):
     if not text:
         return ""
+    
+    # Handle subscripts and superscripts before removing braces
+    sub_map = str.maketrans('0123456789aehijklmnoprstuvx', '₀₁₂₃₄₅₆₇₈₉ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ')
+    super_map = str.maketrans('0123456789+-=()n', '⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿ')
+    
+    def sub_repl(match):
+        content = match.group(1) or match.group(2)
+        if all(c in '0123456789aehijklmnoprstuvx' for c in content):
+            return content.translate(sub_map)
+        return match.group(0)
+    
+    def super_repl(match):
+        content = match.group(1) or match.group(2)
+        if all(c in '0123456789+-=()n' for c in content):
+            return content.translate(super_map)
+        return match.group(0)
+
+    # _i or _{123}
+    text = re.sub(r'_\{([^}]*)\}|_([0-9a-zA-Z])', sub_repl, text)
+    # ^9 or ^{9+7}
+    text = re.sub(r'\^\{([^}]*)\}|\^([0-9a-zA-Z])', super_repl, text)
+
     # LaTeX symbol replacements
     replacements = [
         (r'\\le', '<='),
@@ -111,16 +133,16 @@ def get_problem_statement(url):
     except Exception as e:
         return f"Error fetching statement: {e}"
 
-def add_statement_to_file(file_path, statement, comment_char):
-    if not statement:
-        return
-    
+def add_statement_to_file(file_path, url, comment_char):
     with open(file_path, 'r') as f:
         content = f.read()
     
-    # コメント形式に整形
-    commented_statement = "\n".join([f"{comment_char} {line}" for line in statement.split('\n')])
-    new_content = f"{comment_char} --- Problem Statement ---\n{commented_statement}\n{comment_char} --------------------------\n\n" + content
+    # すでにURLがある場合は追加しない
+    if f"URL: {url}" in content:
+        return
+
+    header = f"{comment_char} URL: {url}\n"
+    new_content = header + content
     
     with open(file_path, 'w') as f:
         f.write(new_content)
@@ -136,9 +158,8 @@ def main():
     ext = os.path.splitext(file_path)[1]
     comment_char = "//" if ext in ['.cpp', '.hpp'] else "#"
     
-    statement = get_problem_statement(url)
-    if statement:
-        add_statement_to_file(file_path, statement, comment_char)
+    # URLのみを追加
+    add_statement_to_file(file_path, url, comment_char)
 
 if __name__ == '__main__':
     main()
