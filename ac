@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 # --- Constants & Configuration ---
-BASE_DIR = Path("/home/mugi2525/atcoder")
+BASE_DIR = Path("/home/natsuko/AtCoder_env")
 VENV_PYTHON = BASE_DIR / ".venv" / "bin" / "python"
 
 # ANSI Colors
