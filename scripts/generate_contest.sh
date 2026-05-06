@@ -80,23 +80,23 @@ PYSCRIPT
 # Python スクリプトを実行
 $VENV_PYTHON /tmp/setup_contest.py "$CONTEST_ID" "$BASE_DIR"
 
-# 問題文をコメントとして各ファイルに追加
-echo "Adding problem statements..."
+# 各問題のセットアップ（問題文の追加とサンプルテストのダウンロード）
+echo "Downloading problem statements and samples..."
 for problem_label in a b c d e f g ex; do
     problem_dir="$BASE_DIR/$problem_label"
     if [ -d "$problem_dir" ]; then
         PROBLEM_URL="https://atcoder.jp/contests/${CONTEST_ID}/tasks/${CONTEST_ID}_${problem_label}"
         
-        # main.cpp と main.py に問題文を追加
+        # 問題文をURLとして追加（add_statement.py が現在の仕様に合わせてURLのみを追加するように修正されている前提）
         $VENV_PYTHON "${SCRIPTS_DIR}/add_statement.py" "$problem_dir/main.cpp" "$PROBLEM_URL" 2>/dev/null || true
         $VENV_PYTHON "${SCRIPTS_DIR}/add_statement.py" "$problem_dir/main.py" "$PROBLEM_URL" 2>/dev/null || true
+        
+        # サンプルテストをダウンロード
+        (cd "$problem_dir" && uv run oj dl "$PROBLEM_URL" -d tests)
     fi
 done
-
-# サンプルテストをダウンロード
-echo "Downloading sample test cases..."
-$VENV_PYTHON -m oj dl "https://atcoder.jp/contests/${CONTEST_ID}" 2>/dev/null || true
 
 echo "Done! Contest ${CONTEST_ID} environment created at ${BASE_DIR}"
 
 
+echo $PATH
