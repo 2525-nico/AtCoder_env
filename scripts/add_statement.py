@@ -11,44 +11,71 @@ def get_problem_statement(url):
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # AtCoderの問題文は通常 #task-statement の中にある
-        statement_element = soup.select_one('#task-statement')
+        # 日本語版を優先的に取得するため span.lang-ja を探す
+        statement_element = soup.select_one('span.lang-ja')
+        if not statement_element:
+            statement_element = soup.select_one('#task-statement')
+        
         if not statement_element:
             return ""
         
-        # 「問題文」セクションを抽出（日本語）
         sections = statement_element.select('section')
-        statement_text = ""
+        collected_text = []
+        
         for section in sections:
             h3 = section.select_one('h3')
-            if h3 and '問題文' in h3.get_text():
-                h3.extract() # "問題文" という見出し自体は削除
-                
-                # 各行をきれいに抽出するための処理
-                lines = []
-                # <p> や <ul> などをブロック単位で処理する
-                for child in section.children:
-                    if child.name in ['p', 'div']:
-                        # ブロック内の <br> は改行に置換
-                        for br in child.find_all('br'):
-                            br.replace_with('\n')
-                        text = child.get_text().strip()
-                        if text:
-                            lines.append(text)
-                    elif child.name in ['ul', 'ol']:
-                        for li in child.find_all('li'):
-                            lines.append('- ' + li.get_text().strip())
-                
-                if not lines:
-                    # もしブロック要素が取れなかった時のフォールバック
-                    lines.append(section.get_text().strip())
-                
-                raw_text = '\n'.join(lines)
-                
-                # 連続する余分な改行を1つにまとめる
-                statement_text = re.sub(r'\n+', '\n', raw_text)
-                break
-        
-        return statement_text
+            if not h3:
+                continue
+            
+            header = h3.get_text().strip()
+            
+            # 抽出対象のセクション見出し
+            targets = ['問題文', '制約', '入力', '出力', '入力例', '出力例']
+            if not any(t in header for t in targets):
+                continue
+            
+            # セクションの見出しを追加
+            collected_text.append(f"--- {header} ---")
+            
+            # 各行を抽出
+            lines = []
+            
+            for child in section.children:
+                if child.name == 'h3':
+                    continue
+                if child.name == 'pre':
+                    text = child.get_text().strip()
+                    if text:
+                        # 入出力例などのコードブロック
+                        lines.append(text)
+                elif child.name in ['p', 'div', 'blockquote']:
+                    # ブロック要素内の br を改行に置換
+                    for br in child.find_all('br'):
+                        br.replace_with('\n')
+                    text = child.get_text().strip()
+                    if text:
+                        lines.append(text)
+                elif child.name in ['ul', 'ol']:
+                    for li in child.find_all('li'):
+                        lines.append('- ' + li.get_text().strip())
+                elif child.name is None and child.string and child.string.strip():
+                    # 素のテキストノード
+                    lines.append(child.string.strip())
+            
+            if not lines:
+                # フォールバック
+                text = section.get_text().strip()
+                if text.startswith(header):
+                    text = text[len(header):].strip()
+                lines.append(text)
+            
+            section_content = '\n'.join(lines)
+            # 連続する改行を調整
+            section_content = re.sub(r'\n{3,}', '\n\n', section_content)
+            collected_text.append(section_content)
+            collected_text.append("") # セクション間の空行
+            
+        return '\n'.join(collected_text).strip()
     except Exception as e:
         return f"Error fetching statement: {e}"
 
