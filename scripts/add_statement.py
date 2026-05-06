@@ -3,6 +3,39 @@ import requests
 from bs4 import BeautifulSoup
 import os
 import re
+import os
+
+def clean_latex(text):
+    if not text:
+        return ""
+    # LaTeX symbol replacements
+    replacements = [
+        (r'\\le', '<='),
+        (r'\\leq', '<='),
+        (r'\\ge', '>='),
+        (r'\\geq', '>='),
+        (r'\\ne', '!='),
+        (r'\\neq', '!='),
+        (r'\\dots', '...'),
+        (r'\\ldots', '...'),
+        (r'\\cdots', '...'),
+        (r'\\vdots', '...'),
+        (r'\\times', '×'),
+        (r'\\pm', '±'),
+        (r'\\infty', '∞'),
+        (r'\\oplus', 'xor'),
+        (r'\\text\{([^}]*)\}', r'\1'),
+        (r'\$+', ''), # Remove dollar signs ($, $$)
+        (r'\\', ''),   # Remove remaining backslashes
+        (r'\{', ''),   # Remove remaining braces
+        (r'\}', ''),
+    ]
+    for pattern, repl in replacements:
+        text = re.sub(pattern, repl, text)
+    
+    # Clean up multiple spaces
+    text = re.sub(r' +', ' ', text)
+    return text.strip()
 
 def get_problem_statement(url):
     try:
@@ -46,28 +79,27 @@ def get_problem_statement(url):
                 if child.name == 'pre':
                     text = child.get_text().strip()
                     if text:
-                        # 入出力例などのコードブロック
+                        # 入出力例などのコードブロックは、サンプルセクション以外ならクリーンアップ
+                        if not any(t in header for t in ['入力例', '出力例']):
+                            text = clean_latex(text)
                         lines.append(text)
                 elif child.name in ['p', 'div', 'blockquote']:
-                    # ブロック要素内の br を改行に置換
                     for br in child.find_all('br'):
                         br.replace_with('\n')
                     text = child.get_text().strip()
                     if text:
-                        lines.append(text)
+                        lines.append(clean_latex(text))
                 elif child.name in ['ul', 'ol']:
                     for li in child.find_all('li'):
-                        lines.append('- ' + li.get_text().strip())
+                        lines.append('- ' + clean_latex(li.get_text()))
                 elif child.name is None and child.string and child.string.strip():
-                    # 素のテキストノード
-                    lines.append(child.string.strip())
+                    lines.append(clean_latex(child.string))
             
             if not lines:
-                # フォールバック
                 text = section.get_text().strip()
                 if text.startswith(header):
                     text = text[len(header):].strip()
-                lines.append(text)
+                lines.append(clean_latex(text))
             
             section_content = '\n'.join(lines)
             # 連続する改行を調整
