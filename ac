@@ -203,7 +203,12 @@ def submit(args):
     filename, _ = get_active_language(target_dir)
     print(f"{C_CYAN}[INFO]{C_RESET} {C_BOLD}{filename}{C_RESET} を提出します...")
     
-    cmd = f"acc s {filename}"
+    if filename.endswith(".py"):
+        # Pythonファイルの場合は自動的にPyPyを優先して提出する
+        cmd = f"acc s {filename} -- --guess-python-interpreter pypy"
+    else:
+        cmd = f"acc s {filename}"
+        
     run_cmd(cmd, cwd=target_dir)
 
 # --- Main Entry Point ---
